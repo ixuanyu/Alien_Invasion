@@ -94,6 +94,15 @@ class AlienInvasion:
             self._check_keydown_events(event)
             self._check_keyup_events(event)
     
+    def _check_bullet_alien_collisions(self):
+        '''响应子弹和外星人的碰撞'''
+        # 击中外星人后删除对应外星人和子弹
+        collisions = pygame.sprite.groupcollide(self.bullets, self.aliens, True, True)
+        if not self.aliens:
+            # 删除现有的所有子弹，并创建一个新的外星舰队
+            self.bullets.empty()
+            self._creat_fleet()
+
     def _update_bullets(self):
         """更新子弹位置并删除已消失的子弹"""
         # 更新子弹位置
@@ -102,16 +111,17 @@ class AlienInvasion:
         for bullet in self.bullets.copy():
             if bullet.rect.bottom <= 0:
                 self.bullets.remove(bullet)
-        # 击中外星人后删除对应外星人和子弹
-        collisions = pygame.sprite.groupcollide(self.bullets, self.aliens, True, True)
-        if not self.aliens:
-            self.bullets.empty()
-            self._creat_fleet()
+        self._check_bullet_alien_collisions()
+
+            
 
     def _update_aliens(self):
         self._check_fleet_edges()
         self.aliens.update()
-    
+        # 检测外星人和飞船之间的碰撞
+        if pygame.sprite.spritecollideany(self.ship, self.aliens):
+            print("ship hit!!!")
+
     def _update_screen(self):
         """更新屏幕上的图像，并切换到新的屏幕"""
         # 设置背景颜色
@@ -124,7 +134,6 @@ class AlienInvasion:
         self.aliens.draw(self.screen)
         # 让最近绘制的屏幕可见
         pygame.display.flip()
-         
 
     def run_game(self):
         """开始游戏的主循环"""
