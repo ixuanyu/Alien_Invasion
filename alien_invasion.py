@@ -1,5 +1,7 @@
 import sys, pygame
+from time import sleep
 from settings import Settings
+from game_stats import GameStats
 from ship import Ship
 from bullet import Bullet
 from alien import Alien
@@ -16,12 +18,17 @@ class AlienInvasion:
         self.settings.screen_width = self.screen.get_rect().width
         self.settings.screen_height = self.screen.get_rect().height
         pygame.display.set_caption("Alien Invasion")
+        # 创建一个用于存储游戏统计信息的实例
+        self.stats = GameStats(self)
 
         self.ship = Ship(self)
         self.bullets = pygame.sprite.Group()
         self.aliens = pygame.sprite.Group()
 
         self._creat_fleet()
+
+        # 游戏启动后处于活动状态
+        self.game_active = True
 
 
     def _creat_alien(self, x_position, y_position):
@@ -31,6 +38,34 @@ class AlienInvasion:
         new_alien.rect.y = y_position
         self.aliens.add(new_alien)
     
+    def _ship_hit(self):
+        """响应飞船和外星人的碰撞"""
+        if self.stats.ships_left > 0:
+            # 将ships_left 减1
+            self.stats.ships_left -= 1
+
+            # 清空外星人列表和子弹列表
+            self.bullets.empty()
+            self.aliens.empty()
+
+            # 创建一个新的外星人舰队，并将飞船放在屏幕底部的中央
+            self._creat_fleet()
+            self.ship.center_ship()
+
+            # 暂停
+            sleep(0.5)
+        else:
+            self.game_active = False
+    
+    def _check_aliens_bottom(self):
+        """检查是否有外星人到达了屏幕的下边缘"""
+        for alien in self.aliens.sprites():
+            if alien.rect.bottom >= self.settings.screen_height:
+                # 像飞船被撞到一样进行处理
+                self._ship_hit()
+                break
+
+
     def _check_fleet_edges(self):
         for alien in self.aliens.sprites():
             if alien.check_edges():
@@ -120,7 +155,9 @@ class AlienInvasion:
         self.aliens.update()
         # 检测外星人和飞船之间的碰撞
         if pygame.sprite.spritecollideany(self.ship, self.aliens):
-            print("ship hit!!!")
+            self._ship_hit()
+        # 检查是否有外星人到达了屏幕的下边缘
+        self._check_aliens_bottom()
 
     def _update_screen(self):
         """更新屏幕上的图像，并切换到新的屏幕"""
@@ -139,9 +176,12 @@ class AlienInvasion:
         """开始游戏的主循环"""
         while True:
             self._check_event()
-            self.ship.update()
-            self._update_bullets()
-            self._update_aliens()
+            
+            if self.game_active:
+                self.ship.update()
+                self._update_bullets()
+                self._update_aliens()
+
             self._update_screen()
             self.clock.tick(60)
 
